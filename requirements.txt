@@ -1,0 +1,11 @@
+bokeh>=1.2.0
+jsmol-bokeh-extension>=0.2
+pandas
+#panel
+-e git://github.com/pyviz/panel.git@v0.6.4a2#egg=panel
+param
+ipython
+notebook
+crossrefapi
+python-dateutil
+ase
