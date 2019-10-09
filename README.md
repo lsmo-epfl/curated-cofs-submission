@@ -25,10 +25,18 @@ Possible future extensions:
 ## Installation
 
 ```
-git clone 
+git clone https://github.com/ltalirz/curated-cofs-submission.git
 pip install -r requirements.txt
+# get latest version of panel (necessary for file upload)
+conda install -c conda-forge panel==0.6.4
 # add path to clone of CURATED-COFs github repository
 export CURATED_COFS=/path/to/CURATED-COFs
 bokeh serve cofdb_submit/
 ```
 Open http://localhost:5006/cofdb_submit in your browser.
+
+## Development
+```
+# enable live reloading when changing the code
+panel serve  cofdb_submit/ --dev cofdb_submit/main.ipynb
+```
