@@ -1,0 +1,3 @@
+[submodule "CURATED-COFs"]
+	path = CURATED-COFs
+	url = https://github.com/danieleongari/CURATED-COFs
