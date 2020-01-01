@@ -38,3 +38,6 @@ Open http://localhost:5006/cofdb_submit in your browser.
 # enable live reloading when changing the code
 panel serve  cofdb_submit/ --dev cofdb_submit/main.ipynb
 ```
+
+## Online version
+Playing around with deployment of this app on heroku [here](https://ltal-py.herokuapp.com)
