@@ -27,8 +27,6 @@ Possible future extensions:
 ```
 git clone https://github.com/ltalirz/curated-cofs-submission.git
 pip install -r requirements.txt
-# get latest version of panel (necessary for file upload)
-conda install -c conda-forge panel==0.6.4
 # add path to clone of CURATED-COFs github repository
 export CURATED_COFS=/path/to/CURATED-COFs
 bokeh serve cofdb_submit/
