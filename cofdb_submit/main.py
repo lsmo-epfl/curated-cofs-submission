@@ -261,12 +261,8 @@ class CifForm():
         write(cif_path, self.atoms)
 
         # Using manage_crystal to use the standard formatting
-        from manage_crystal.file_parser import parse_from_filepath
-        from manage_crystal.file_writer import write_to_filepath
-        crys = parse_from_filepath(cif_path, 0)
-        crys.check_parse()
-        crys.compute_atom_count()
-        write_to_filepath(crys, cif_path)
+        from manage_crystal.utils import parse_and_write
+        parse_and_write(cif_path, cif_path)
 
         self.btn_add_cif.button_type = 'success'
 
