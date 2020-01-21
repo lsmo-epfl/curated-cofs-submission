@@ -49,18 +49,14 @@ inp_paper_id = pn.widgets.TextInput(name='CURATED-COFs paper ID', placeholder=''
 div_out = pn.widgets.StaticText(name='Output', value='')
 btn_add_paper = pn.widgets.Button(name='Add paper', button_type='primary')
 
-def get_metadata(doi):
-    import requests
-    import json
-    response = requests.get(url="http://dx.doi.org/"+doi,
-            headers={"accept":"application/rdf+xml;q=0.5, application/vnd.citationstyles.csl+json;q=10"})
-    return json.loads(response.content)
-
 def on_click_fetch(event):
     """Get metadata for DOI, and return an error if the DOI is not valid (no metadata found)."""
     import dateutil
     from crossref.restful import Works
     import json
+
+    # turn the "Add paper" primary, to remember clicking it again!
+    btn_add_paper.button_type = 'primary'
 
     # test data
     inp_doi.value = inp_doi.value or "10.1021/jacs.9b01891"
@@ -203,6 +199,9 @@ class CifForm():
         from ase.build import make_supercell
         from io import StringIO, BytesIO
         import re
+
+        # turn "Add CIF" button primary, to remember clicking it again!
+        self.btn_add_cif.button_type = 'primary'
 
         cif_str = self.inp_cif.value.decode()
         atoms = read(StringIO(cif_str), format='cif')
