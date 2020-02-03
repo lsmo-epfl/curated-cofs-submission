@@ -203,6 +203,8 @@ class CifForm():
         # turn "Add CIF" button primary, to remember clicking it again!
         self.btn_add_cif.button_type = 'primary'
 
+        self.inp_name.value = self.inp_cif.filename.split(".")[0]
+
         cif_str = self.inp_cif.value.decode()
         atoms = read(StringIO(cif_str), format='cif')
 

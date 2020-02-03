@@ -1,9 +1,8 @@
-bokeh>=1.2.0
-jsmol-bokeh-extension>=0.2
+bokeh>=1.4.0
+jsmol-bokeh-extension>=0.2.1 # by ltalirz
+panel>=0.8.0
+param>=1.9.2
 pandas
-panel>=0.6.4
-#-e git://github.com/pyviz/panel.git@v0.6.4a2#egg=panel
-#param
 ipython
 notebook
 crossrefapi
