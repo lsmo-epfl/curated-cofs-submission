@@ -12,6 +12,7 @@ Papers:
  * Add info to .csv
 
 Frameworks:
+ * Select the file or drag it to the `Choose file` button
  * Render CIF using jsmol
  * Prefill basic information (elements)
  * Mint CURATED-COFS framework ID

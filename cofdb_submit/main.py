@@ -74,7 +74,8 @@ def on_click_fetch(event):
     inp_title.value = str(metadata['title'][0])
     journal = str(metadata['short-container-title'][0])
 
-    if 'volume' in metadata: # already published in an issue
+    if 'volume' in metadata:
+        already_in_issue = True
         volume = metadata['volume']
         if 'published-print' in metadata: # ACS, wiley
             year = str(metadata['published-print']['date-parts'][0][0])
@@ -83,15 +84,18 @@ def on_click_fetch(event):
         else:
             year = 'ERROR: year not found.'
     else: # not yet in an issue: assuming that it will be published at the same year of today
-        volume = "xxxxx"
+        already_in_issue = False
         year = str(datetime.datetime.now().year)
 
     inp_year.value = year
 
-    if 'page' in metadata: # most of the journals
-        inp_reference.value = "{}, {}, {}, {}".format(journal, year, volume, metadata['page'])
-    else: # NatComm or not yet in an issue
-        inp_reference.value = "{}, {}, {}".format(journal, year, volume)
+    if already_in_issue:
+        if 'page' in metadata: # most of the journals
+            inp_reference.value = "{}, {}, {}, {}".format(journal, year, volume, metadata['page'])
+        else:  # NatComm or not yet in an issue
+            inp_reference.value = "{}, {}, {}".format(journal, year, volume)
+    else:
+        inp_reference.value = "{}, {}, {}".format(journal, year, "in press")
     inp_paper_id.value = mint_paper_id(doi=inp_doi.value, year=inp_year.value)
     btn_doi.button_type = 'success'
 
@@ -146,6 +150,7 @@ class CifForm():
         self.applet = structure_jsmol(self.jsmol_script_source)
 
         self.inp_source = pn.widgets.Select(name='CIF source', options={'SI': 'SI', 'SI (CIF)': 'SI (CIF)', 'CSD': 'CSD'})
+        self.inp_csd = pn.widgets.TextInput(name='CSD Number', placeholder='1846139')
         self.inp_name = pn.widgets.TextInput(name='CIF name', placeholder='As used in publication')
         self.inp_dimensionality = pn.widgets.TextInput(name='CIF dimensionality', placeholder='Detected by ASE')
         self.inp_elements = pn.widgets.TextInput(name='CIF elements', placeholder='C,H,...')
@@ -161,9 +166,13 @@ class CifForm():
 
     @property
     def info_dict(self):
+        if self.inp_source.value == "CSD":
+            source = "CSD, {}".format(self.inp_csd.value)
+        else:
+            source = self.inp_source.value
         return {
             'cof_id': self.inp_cof_id.value,
-            'source': self.inp_source.value,
+            'source': source,
             'name': self.inp_name.value,
             'dimensionality': self.inp_dimensionality.value,
             'elements': self.inp_elements.value,
@@ -177,7 +186,7 @@ class CifForm():
             pn.pane.HTML("""<h2>Add CIF</h2>"""),
             pn.Row(self.inp_cif, self.btn_cif),
             pn.pane.Bokeh(self.applet),
-            self.inp_source,
+            pn.Row(self.inp_source, self.inp_csd),
             self.inp_name,
             self.inp_dimensionality,
             self.inp_elements,
