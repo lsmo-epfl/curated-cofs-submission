@@ -2,6 +2,7 @@
 """Add new entries to the CURATED-COFs files: cof-papers.csv and cof-frameworks.csv."""
 
 import os
+import numpy as np
 import panel as pn
 import pandas
 import datetime
@@ -15,7 +16,11 @@ def mint_paper_id(doi, year):
     """Check if the paper is already in cof-papers.csv (same DOI) and print that value,
     otherwise assign the new paper ID.
     """
-    df_papers = pandas.read_csv(PAPER_FILE)
+    try:
+        df_papers = pandas.read_csv(PAPER_FILE)
+    except FileNotFoundError:
+        return "ERROR: cof-papers.csv not found... check the README!"
+
     if doi in df_papers['DOI'].values:
         return str(df_papers[df_papers['DOI'] == doi]['CURATED-COFs paper ID'].values[0]) + " (already present)"
 
@@ -30,6 +35,7 @@ def mint_paper_id(doi, year):
     return "p{:s}{:02d}".format(year[2:], counter)
 
 def mint_cof_id(paper_id, charge, dimensionality):
+    """Check the list of CURATED-COF IDs and assign a new one accordingly."""
     df_frameworks = pandas.read_csv(FRAMEWORKS_FILE)
     other_cofs = [ id for id in df_frameworks["CURATED-COFs ID"] if id.startswith(paper_id[1:])]
     counter = len(other_cofs)
@@ -104,8 +110,10 @@ btn_doi.on_click(on_click_fetch)
 def on_click_add(event):
     """Add paper to file cof-papers.csv: botton will turn red if something is missing or paper already present."""
     if not (inp_paper_id.value and inp_reference.value and inp_doi.value and inp_title.value) or \
-       "(already present)" in inp_paper_id.value:
+       "(already present)" in inp_paper_id.value or \
+       "ERROR" in inp_paper_id.value:
         btn_add_paper.button_type = 'danger'
+        print(inp_paper_id.value + " Paper not added because of some problem.")
         return
 
     btn_add_paper.button_type = 'primary'
@@ -166,6 +174,7 @@ class CifForm():
 
     @property
     def info_dict(self):
+        """Dictionary containing all the information assigned (automatically or manually) for the new COF."""
         if self.inp_source.value == "CSD":
             source = "CSD, {}".format(self.inp_csd.value)
         else:
@@ -182,6 +191,7 @@ class CifForm():
         }
 
     def servable(self):
+        """Layout of the CIF section of the page."""
         self.column = pn.Column(
             pn.pane.HTML("""<h2>Add CIF</h2>"""),
             pn.Row(self.inp_cif, self.btn_cif),
@@ -199,9 +209,7 @@ class CifForm():
         return self.column.servable()
 
     def on_click_parse(self, event):
-        """Load the CIF, unwrap it to P1 using ASE, extract some info, and display it.
-        NOTE: it would be nice to use the filename as CIF name, but FileInput doesn't allow you to know the path.
-        """
+        """Load the CIF, unwrap it to P1 using ASE, extract some info, and display it."""
         from ase.io import read, write
         from ase.io.cif import write_cif
         from ase.geometry.dimensionality import analyze_dimensionality
@@ -212,8 +220,10 @@ class CifForm():
         # turn "Add CIF" button primary, to remember clicking it again!
         self.btn_add_cif.button_type = 'primary'
 
+        # assign the filename as the first guess for the COF name, which can be manually corrected
         self.inp_name.value = self.inp_cif.filename.split(".")[0]
 
+        # read the CIF file and get useful information
         cif_str = self.inp_cif.value.decode()
         atoms = read(StringIO(cif_str), format='cif')
 
@@ -229,11 +239,10 @@ class CifForm():
             # Check if it is correcly oriented, and extend to two layers if onyly one is present
             z_min_thr = 6 #if less, it is likely a single layer
             cell_lengths = atoms.get_cell_lengths_and_angles()[0:3]
-            if min(cell_lengths[0],cell_lengths[1] < z_min_thr): # X or Y are perpendicular to a single layer
-                self.inp_dimensionality.value = "ERROR: you need to rotate the axes to have the layers on XY."
-                self.inp_modifications.value = "ERROR: you need to rotate the axes to have the layers on XY."
+            if cell_lengths[0] < z_min_thr or cell_lengths[1] < z_min_thr: # X or Y are perpendicular to a single layer
+                self.inp_dimensionality.value = "ERROR: you need to rotate the axes to have the layers on XY plane."
+                self.inp_modifications.value = "ERROR: you need to rotate the axes to have the layers on XY plane."
             if cell_lengths[2] < z_min_thr: # Z is perpendicular to a single layer
-                import numpy as np
                 atoms = make_supercell(atoms, np.diag([1,1,2]))
                 self.inp_modifications.value = 'replicated 2x in C direction'
         else:
@@ -250,7 +259,7 @@ class CifForm():
 
 
     def on_click_add(self, event):
-        """Add framework to list and add CIF file."""
+        """Add framework to list and add CIF file to cifs/ folder."""
         from ase.io import write
         info = self.info_dict
         if not all(v for k,v in info.items() if k not in ['modifications']):

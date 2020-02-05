@@ -8,4 +8,4 @@ notebook
 crossrefapi
 python-dateutil
 ase
-manage-crystal
+manage-crystal #by danieleongari
