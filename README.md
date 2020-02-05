@@ -12,26 +12,31 @@ Papers:
  * Add info to .csv
 
 Frameworks:
+ * Select the file or drag it to the `Choose file` button
  * Render CIF using jsmol
- * Prefill basic information (elements)
+ * Prefill basic information (name, elements, 2D/3D)
  * Mint CURATED-COFS framework ID
  * Add info to .csv and add new CIF
 
 Possible future extensions:
- * adding hydrogens automatically?
- * automatic orientation?
- * ... your idea here!
+ * adding hydrogens automatically
+ * automatic orientation of the layer using `manage_crystal -rotaxis`
+ * better parsing of the space group (sometimes failing with ASE)
 
-## Installation
+
+## Installation and run
 
 ```
 git clone https://github.com/ltalirz/curated-cofs-submission.git
 pip install -r requirements.txt
-# add path to clone of CURATED-COFs github repository
-export CURATED_COFS=/path/to/CURATED-COFs
-bokeh serve cofdb_submit/
 ```
-Open http://localhost:5006/cofdb_submit in your browser.
+
+Add path to clone of CURATED-COFs github repository and run it in your browser at http://localhost:5006/cofdb_submit.
+
+```
+export CURATED_COFS=/path/to/CURATED-COFs
+bokeh serve --show cofdb_submit/
+```
 
 ## Development
 ```
