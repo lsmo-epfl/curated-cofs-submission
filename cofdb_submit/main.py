@@ -157,7 +157,11 @@ class CifForm():
         self.jsmol_script_source = bmd.ColumnDataSource()
         self.applet = structure_jsmol(self.jsmol_script_source)
 
-        self.inp_source = pn.widgets.Select(name='CIF source', options={'SI': 'SI', 'SI (CIF)': 'SI (CIF)', 'CSD': 'CSD'})
+        self.inp_source = pn.widgets.Select(name='CIF source', 
+            options={'SI': 'SI', 
+                     'SI (CIF)': 'SI (CIF)', 
+                     'CSD': 'CSD',
+                     'Private Communication': "Priv. Comm."})
         self.inp_csd = pn.widgets.TextInput(name='CSD Number', placeholder='1846139')
         self.inp_name = pn.widgets.TextInput(name='CIF name', placeholder='As used in publication')
         self.inp_dimensionality = pn.widgets.TextInput(name='CIF dimensionality', placeholder='Detected by ASE')
