@@ -23,8 +23,11 @@ Possible future extensions:
  * automatic orientation of the layer using `manage_crystal -rotaxis`
  * better parsing of the space group (sometimes failing with ASE)
 
+## Prerequisites
 
-## Installation and run
+ * nodejs >= 10
+
+## Installation
 
 ```
 git clone https://github.com/ltalirz/curated-cofs-submission.git
@@ -35,7 +38,7 @@ Add path to clone of CURATED-COFs github repository and run it in your browser a
 
 ```
 export CURATED_COFS=/path/to/CURATED-COFs
-bokeh serve --show cofdb_submit/
+bokeh serve cofdb_submit/ --show
 ```
 
 ## Development

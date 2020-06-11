@@ -4,27 +4,18 @@
 import os
 import numpy as np
 import panel as pn
-import pandas
 import datetime
+from data import PAPERS_DF, PAPERS_FILE, FRAMEWORKS_DF, FRAMEWORKS_FILE, CIFS_FOLDER
 
-CURATED_COFS=os.environ.get('CURATED_COFS', os.path.abspath('./CURATED-COFs'))
-PAPER_FILE = os.path.join(CURATED_COFS, 'cof-papers.csv')
-FRAMEWORKS_FILE = os.path.join(CURATED_COFS, 'cof-frameworks.csv')
-CIFS_FOLDER = os.path.join(CURATED_COFS, 'cifs')
 
 def mint_paper_id(doi, year):
     """Check if the paper is already in cof-papers.csv (same DOI) and print that value,
     otherwise assign the new paper ID.
     """
-    try:
-        df_papers = pandas.read_csv(PAPER_FILE)
-    except FileNotFoundError:
-        return "ERROR: cof-papers.csv not found... check the README!"
+    if doi in PAPERS_DF['DOI'].values:
+        return str(PAPERS_DF[PAPERS_DF['DOI'] == doi]['CURATED-COFs paper ID'].values[0]) + " (already present)"
 
-    if doi in df_papers['DOI'].values:
-        return str(df_papers[df_papers['DOI'] == doi]['CURATED-COFs paper ID'].values[0]) + " (already present)"
-
-    id_year = sorted(df_papers[df_papers['CURATED-COFs paper ID'].str.contains("p"+year[2:])]['CURATED-COFs paper ID'])
+    id_year = sorted(PAPERS_DF[PAPERS_DF['CURATED-COFs paper ID'].str.contains("p"+year[2:])]['CURATED-COFs paper ID'])
     if len(id_year)==0:
         counter = 0
     else:
@@ -36,8 +27,7 @@ def mint_paper_id(doi, year):
 
 def mint_cof_id(paper_id, charge, dimensionality):
     """Check the list of CURATED-COF IDs and assign a new one accordingly."""
-    df_frameworks = pandas.read_csv(FRAMEWORKS_FILE)
-    other_cofs = [ id for id in df_frameworks["CURATED-COFs ID"] if id.startswith(paper_id[1:])]
+    other_cofs = [ id for id in FRAMEWORKS_DF["CURATED-COFs ID"] if id.startswith(paper_id[1:])]
     counter = len(other_cofs)
     return "{paper}{counter}{charge}{dim}".format(paper=paper_id[1:], counter=str(counter), charge=charge,
                                                   dim=dimensionality)
@@ -121,7 +111,7 @@ def on_click_add(event):
     line = '{id},"{ref}",{doi},"{title}"\n'.format(id=inp_paper_id.value, ref=inp_reference.value,
                                                   doi=inp_doi.value, title=inp_title.value)
     print(line)
-    with open(PAPER_FILE, 'a+') as handle:
+    with open(PAPERS_FILE, 'a+') as handle:
         handle.write(line)
 
     btn_add_paper.button_type = 'success'
@@ -167,7 +157,7 @@ class CifForm():
         self.inp_dimensionality = pn.widgets.TextInput(name='CIF dimensionality', placeholder='Detected by ASE')
         self.inp_elements = pn.widgets.TextInput(name='CIF elements', placeholder='C,H,...')
         self.inp_duplicate = pn.widgets.TextInput(name='CIF duplicate found', value='none')
-        self.inp_modifications = pn.widgets.TextInput(name='CIF modifications', value='none')
+        self.inp_modifications = pn.widgets.AutocompleteInput(name='CIF modifications', value='none', options=list(set(FRAMEWORKS_DF['Modifications'])))
         self.inp_charge = pn.widgets.Select(name='CIF charge', options={ 'Neutral': 'N', 'Charged': 'C' })
         self.inp_cof_id = pn.widgets.TextInput(name='COF ID', value='none')
         self.btn_mint_id = pn.widgets.Button(name='Mint', button_type='primary')
@@ -229,6 +219,7 @@ class CifForm():
 
         # read the CIF file and get useful information
         cif_str = self.inp_cif.value.decode()
+        print(self.inp_cif.get_param_values())
         atoms = read(StringIO(cif_str), format='cif')
 
         formula = atoms.get_chemical_formula()
