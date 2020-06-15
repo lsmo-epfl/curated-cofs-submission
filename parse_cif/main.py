@@ -15,12 +15,13 @@ class CifParse():
 
     def __init__(self):
         self.name_input = pn.widgets.TextInput(name='COF name', placeholder='Insert...')
-        self.cell_input = pn.widgets.TextInput(name='Cell info', placeholder='a = b = 37.2145 Å, c = 4.0878 Å, α = β = 90° and γ = 120°')
+        self.cell_input = pn.widgets.TextInput(name='Cell info', placeholder='a = b = 37.2145 37.2145 Å , c = 4.0878 Å, α = β = 90° 90 and γ = 120°')
         self.symm_input = pn.widgets.TextInput(name='Symm info', placeholder='P6')
         self.coord_input = pn.widgets.input.TextAreaInput(
             name='Atomic coord. info', 
             placeholder='Enter a string here...', 
-            height=800
+            max_length=100000,
+            height=800,
             )
 
         self.textbox = pn.widgets.input.TextAreaInput(
@@ -36,8 +37,6 @@ class CifParse():
         import bokeh.models as bmd
         self.jsmol_script_source = bmd.ColumnDataSource()
         self.applet = structure_jsmol(self.jsmol_script_source)
-
-        self.cif_dict = {}
         
     def servable(self):
         """Layout of the CIF section of the page."""
@@ -65,17 +64,39 @@ class CifParse():
 end "cifstring"
 """.format(str(cif_str))]
         
-    
-    def on_click_parse(self, event):
+    def parse_cell_input(self):
+        """Try first to understand a string like:
+        'a = b = 37.2145Å, c = 4.0878 Å, α = β = 90° and γ = 120°'.
+        If it fails, simply extract six floats.
+        """
+        fail_parsing = False
+
         data = self.cell_input.value
-        numbers = re.sub("[^0-9.]", " ", data).split() # 'a = b = 37.2145 Å, c = 4.0878 Å, α = β = 90° and γ = 120°, w' >>> [37.2145, 4.0878, 90, 120]
-        numbers = [float(x) for x in numbers] 
-        self.cif_dict['a'] = numbers[0]
-        self.cif_dict['b'] = numbers[1]
-        self.cif_dict['c'] = numbers[2]
-        self.cif_dict['alpha'] = numbers[3]
-        self.cif_dict['beta'] = numbers[4]
-        self.cif_dict['gamma'] = numbers[5]
+        data = re.sub("and", " ", data)  # remove "and" that makes conflicts with "a"
+        data = re.sub("Ɣ", "γ", data)    # replace weird gamma
+        data = re.sub("[^0-9.abcαβγ]", " ", data).split()
+        if "." in data: data.remove(".") # remove isolate dots
+
+        for i, val in enumerate(data):
+            if val in 'abcαβγ':
+                for j in data[i:]:
+                    if j not in 'abcαβγ':
+                        try:
+                            self.cif_dict[val] = float(j)
+                        except:
+                            fail_parsing = True
+                        break
+
+        if fail_parsing or not all(celldim in self.cif_dict for celldim in 'abcαβγ'):
+            data = self.cell_input.value
+            data = re.sub("[^0-9.]", " ", data).split()
+            if "." in data: data.remove(".")
+            for i, celldim in enumerate('abcαβγ'):
+                self.cif_dict[celldim] = float(data[i])
+
+    def on_click_parse(self, event):
+        self.cif_dict = {} # Reset to avoid problems
+        self.parse_cell_input() 
 
         self.cif_dict['symm'] = self.symm_input.value
 
@@ -103,12 +124,12 @@ end "cifstring"
 
             print("data_crystal", file=ofile)
             print(" ", file=ofile)
-            print("_cell_length_a    %.5f" % self.cif_dict['a'],     file=ofile)
-            print("_cell_length_b    %.5f" % self.cif_dict['b'],     file=ofile)
-            print("_cell_length_c    %.5f" % self.cif_dict['c'],     file=ofile)
-            print("_cell_angle_alpha %.5f" % self.cif_dict['alpha'], file=ofile)
-            print("_cell_angle_beta  %.5f" % self.cif_dict['beta'],  file=ofile)
-            print("_cell_angle_gamma %.5f" % self.cif_dict['gamma'], file=ofile)
+            print("_cell_length_a    %.5f" % self.cif_dict['a'], file=ofile)
+            print("_cell_length_b    %.5f" % self.cif_dict['b'], file=ofile)
+            print("_cell_length_c    %.5f" % self.cif_dict['c'], file=ofile)
+            print("_cell_angle_alpha %.5f" % self.cif_dict['α'], file=ofile)
+            print("_cell_angle_beta  %.5f" % self.cif_dict['β'], file=ofile)
+            print("_cell_angle_gamma %.5f" % self.cif_dict['γ'], file=ofile)
             print(" ", file=ofile)
             print(f"_symmetry_space_group_name_H-M  '{self.cif_dict['symm']}'", file=ofile)
             print(" ", file=ofile)
