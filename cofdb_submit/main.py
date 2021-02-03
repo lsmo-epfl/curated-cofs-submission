@@ -131,7 +131,7 @@ column = pn.Column(
 column.servable()
 
 """Add CIF info"""
-"CURATED-COFs ID","Source","Name","Elements","Duplicate found","Modifications"
+"CURATED-COFs ID","Source","Name","Elements","Modifications"
 "05000N2","tong-v2, 035","COF-1","H,B,C,O","Science, 2005, 310, 1166-1170","none","none"
 
 class CifForm():
@@ -156,7 +156,6 @@ class CifForm():
         self.inp_name = pn.widgets.TextInput(name='CIF name', placeholder='As used in publication')
         self.inp_dimensionality = pn.widgets.TextInput(name='CIF dimensionality', placeholder='Detected by ASE')
         self.inp_elements = pn.widgets.TextInput(name='CIF elements', placeholder='C,H,...')
-        self.inp_duplicate = pn.widgets.TextInput(name='CIF duplicate found', value='none')
         self.inp_modifications = pn.widgets.AutocompleteInput(name='CIF modifications', value='none', options=list(set(FRAMEWORKS_DF['Modifications'])))
         self.inp_charge = pn.widgets.Select(name='CIF charge', options={ 'Neutral': 'N', 'Charged': 'C' })
         self.inp_cof_id = pn.widgets.TextInput(name='COF ID', value='none')
@@ -179,7 +178,6 @@ class CifForm():
             'name': self.inp_name.value,
             'dimensionality': self.inp_dimensionality.value,
             'elements': self.inp_elements.value,
-            'duplicate': self.inp_duplicate.value,
             'modifications': self.inp_modifications.value,
             'charge': self.inp_charge.value,
         }
@@ -194,7 +192,6 @@ class CifForm():
             self.inp_name,
             self.inp_dimensionality,
             self.inp_elements,
-            self.inp_duplicate,
             self.inp_modifications,
             self.inp_charge,
             pn.Row(self.inp_cof_id, self.btn_mint_id),
@@ -262,9 +259,9 @@ class CifForm():
             return
 
         self.btn_add_cif.button_type = 'primary'
-        line = '{id},{source},"{name}","{elements}","{duplicates}","{mod}"\n'.format(
+        line = '{id},{source},"{name}","{elements}","{mod}"\n'.format(
             id=info['cof_id'], source=info['source'], name=info['name'], elements = info['elements'],
-            duplicates=info['duplicate'], mod=info['modifications'])
+            mod=info['modifications'])
         print(line)
         with open(FRAMEWORKS_FILE, 'a+') as handle:
            handle.write(line)
