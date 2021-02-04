@@ -118,7 +118,7 @@ end "cifstring"
                 self.cif_dict['coord'].append(newline1)
                 self.cif_dict['coord'].append(newline2)
 
-        filename = self.name_input.value.strip() + ".cif"
+        filename = "./cifs/" + self.name_input.value.strip() + ".cif"
         with open(filename, 'w') as ofile:
             print()
 
