@@ -18,11 +18,6 @@ Frameworks:
  * Mint CURATED-COFS framework ID
  * Add info to .csv and add new CIF
 
-Possible future extensions:
- * adding hydrogens automatically
- * automatic orientation of the layer using `manage_crystal -rotaxis`
- * better parsing of the space group (sometimes failing with ASE)
-
 ## Prerequisites
 
  * nodejs >= 10
