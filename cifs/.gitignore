@@ -1,0 +1,5 @@
+# Thil folder wil contain the output of parse_cif
+# Ignore everything in this directory
+*
+# Except this file
+!.gitignore

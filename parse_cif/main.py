@@ -4,9 +4,10 @@
 import os
 import numpy as np
 import panel as pn
-import pandas
+import pandas as pd
 import datetime
 import re
+from pathlib import Path
 
 pn.extension()
 
@@ -16,19 +17,25 @@ class CifParse():
     def __init__(self):
         self.name_input = pn.widgets.TextInput(name='COF name', placeholder='Insert...')
         self.cell_input = pn.widgets.TextInput(name='Cell info', placeholder='a = b = 37.2145 37.2145 Å , c = 4.0878 Å, α = β = 90° 90 and γ = 120°')
-        self.symm_input = pn.widgets.TextInput(name='Symm info', placeholder='P6')
+        self.symm_input = pn.widgets.TextInput(name='Symm info', placeholder='P6 (check the table on the bottom)')
         self.coord_input = pn.widgets.input.TextAreaInput(
             name='Atomic coord. info', 
             placeholder='Enter a string here...', 
             max_length=100000,
             height=800,
             )
-
+        self.find = pn.widgets.TextInput(name='Find', placeholder='RegEx to find...')
+        self.replace = pn.widgets.TextInput(name='Replace', placeholder='Text to replace...')
+        self.replace_bak = []
         self.textbox = pn.widgets.input.TextAreaInput(
             name='Output CIF', 
             placeholder='Output CIF will be shown here...', 
             height=800
             )
+        self.btn_replace = pn.widgets.Button(name='Replace RegEx', button_type='primary')
+        self.btn_replace.on_click(self.on_click_replace)
+        self.btn_undo = pn.widgets.Button(name='Undo replace', button_type='primary')
+        self.btn_undo.on_click(self.on_click_undo)
 
         self.btn_parse = pn.widgets.Button(name='Parse CIF', button_type='primary')
         self.btn_parse.on_click(self.on_click_parse)
@@ -37,6 +44,10 @@ class CifParse():
         import bokeh.models as bmd
         self.jsmol_script_source = bmd.ColumnDataSource()
         self.applet = structure_jsmol(self.jsmol_script_source)
+
+        space_groups_csv = Path(__file__).parent / "space_groups.csv"
+        space_groups_df = pd.read_csv(space_groups_csv, index_col="_space_group_IT_number")
+        self.space_groups_table = pn.widgets.DataFrame(space_groups_df, autosize_mode='fit_viewport')
         
     def servable(self):
         """Layout of the CIF section of the page."""
@@ -46,9 +57,19 @@ class CifParse():
             self.cell_input,
             self.symm_input,
             self.coord_input,
+            pn.Row(
+                self.find,
+                self.replace,
+                pn.Column(
+                    self.btn_replace,
+                    self.btn_undo
+                )
+            ),
             self.btn_parse,
             pn.pane.Bokeh(self.applet),
             self.textbox,
+            pn.pane.HTML("""<h2>Space Groups lookup table</h2>"""),
+            self.space_groups_table,
 
             width=1000
         )
@@ -94,31 +115,56 @@ end "cifstring"
             for i, celldim in enumerate('abcαβγ'):
                 self.cif_dict[celldim] = float(data[i])
 
+    def read_and_check_symm(self, symm_input):
+        """Check if the input symmetry (_space_group_name_H-M_alt convention) starts with a correct character,
+        and convert the string to upper/lower case to help ASE for its parsing.
+        """
+        first_char_list = {'A', 'C', 'F', 'I', 'P', 'R'}
+        first_char_inp = symm_input.strip()[0].upper()
+        other_char_inp = symm_input.strip()[1:].lower()
+        if first_char_inp not in first_char_list:
+            raise ValueError(f"No space group starts with '{first_char_inp}': check the table at the bottom!")
+        return first_char_inp + other_char_inp
+
+    def on_click_replace(self, event):
+        text_initial = self.coord_input.value
+        self.replace_bak.append(text_initial)
+        text_replaced = re.sub(self.find.value,self.replace.value,text_initial,flags=re.MULTILINE)
+        self.coord_input.value = text_replaced
+
+    def on_click_undo(self, event):
+        if len(self.replace_bak)==0:
+            raise ValueError("No replaced text backup to load!")
+        self.coord_input.value = self.replace_bak.pop()
+
     def on_click_parse(self, event):
         self.cif_dict = {} # Reset to avoid problems
         self.parse_cell_input() 
 
-        self.cif_dict['symm'] = self.symm_input.value
+        self.cif_dict['symm'] = self.read_and_check_symm(self.symm_input.value)
 
         self.cif_dict['coord'] = []
 
         for line in self.coord_input.value.splitlines():
-            cols = len(line.split())
-            # skip len==0, and len==1 (pagenumbers)
-            if cols==4:
+            ncols = len(line.split())
+            if ncols==0 or ncols==1: # likely: \n or page number
+                continue
+            elif ncols==4: # likely: "atom_type x y z"
                 self.cif_dict['coord'].append(line)
-            if cols==5:
+            elif ncols==5: # likely: "atom_type element x y z"
                 d = line.split()
                 newline = f'{d[0]} {d[2]} {d[3]} {d[4]}'
                 self.cif_dict['coord'].append(newline)
-            if cols==8:
+            elif ncols==8: # likely: double column "atom1 x1 y1 z1 atom2 x2 y2 z2"
                 d = line.split()
                 newline1 = f'{d[0]} {d[1]} {d[2]} {d[3]}'
                 newline2 = f'{d[4]} {d[5]} {d[6]} {d[7]}'
                 self.cif_dict['coord'].append(newline1)
                 self.cif_dict['coord'].append(newline2)
+            else:
+                raise ValueError(f"Unable to parse line: '{line}'")
 
-        filename = self.name_input.value.strip() + ".cif"
+        filename = Path(__file__).parent.parent / "cifs" / (self.name_input.value.strip() + ".cif")
         with open(filename, 'w') as ofile:
             print()
 
