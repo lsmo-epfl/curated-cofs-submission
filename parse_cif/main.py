@@ -4,9 +4,10 @@
 import os
 import numpy as np
 import panel as pn
-import pandas
+import pandas as pd
 import datetime
 import re
+from pathlib import Path
 
 pn.extension()
 
@@ -16,7 +17,7 @@ class CifParse():
     def __init__(self):
         self.name_input = pn.widgets.TextInput(name='COF name', placeholder='Insert...')
         self.cell_input = pn.widgets.TextInput(name='Cell info', placeholder='a = b = 37.2145 37.2145 Å , c = 4.0878 Å, α = β = 90° 90 and γ = 120°')
-        self.symm_input = pn.widgets.TextInput(name='Symm info', placeholder='P6')
+        self.symm_input = pn.widgets.TextInput(name='Symm info', placeholder='P6 (check the table on the bottom)')
         self.coord_input = pn.widgets.input.TextAreaInput(
             name='Atomic coord. info', 
             placeholder='Enter a string here...', 
@@ -37,6 +38,10 @@ class CifParse():
         import bokeh.models as bmd
         self.jsmol_script_source = bmd.ColumnDataSource()
         self.applet = structure_jsmol(self.jsmol_script_source)
+
+        space_groups_csv = Path(__file__).parent / "space_groups.csv"
+        space_groups_df = pd.read_csv(space_groups_csv, index_col="_space_group_IT_number")
+        self.space_groups_table = pn.widgets.DataFrame(space_groups_df, autosize_mode='fit_viewport')
         
     def servable(self):
         """Layout of the CIF section of the page."""
@@ -49,6 +54,8 @@ class CifParse():
             self.btn_parse,
             pn.pane.Bokeh(self.applet),
             self.textbox,
+            pn.pane.HTML("""<h2>Space Groups lookup table</h2>"""),
+            self.space_groups_table,
 
             width=1000
         )
@@ -94,11 +101,22 @@ end "cifstring"
             for i, celldim in enumerate('abcαβγ'):
                 self.cif_dict[celldim] = float(data[i])
 
+    def read_and_check_symm(self, symm_input):
+        """Check if the input symmetry (_space_group_name_H-M_alt convention) starts with a correct character,
+        and convert the string to upper/lower case to help ASE for its parsing.
+        """
+        first_char_list = {'A', 'C', 'F', 'I', 'P', 'R'}
+        first_char_inp = symm_input.strip()[0].upper()
+        other_char_inp = symm_input.strip()[1:].lower()
+        if first_char_inp not in first_char_list:
+            raise ValueError(f"No space group starts with '{first_char_inp}': check the table at the bottom!")
+        return first_char_inp + other_char_inp
+
     def on_click_parse(self, event):
         self.cif_dict = {} # Reset to avoid problems
         self.parse_cell_input() 
 
-        self.cif_dict['symm'] = self.symm_input.value
+        self.cif_dict['symm'] = self.read_and_check_symm(self.symm_input.value)
 
         self.cif_dict['coord'] = []
 
@@ -118,7 +136,7 @@ end "cifstring"
                 self.cif_dict['coord'].append(newline1)
                 self.cif_dict['coord'].append(newline2)
 
-        filename = "./cifs/" + self.name_input.value.strip() + ".cif"
+        filename = Path("./cifs/") / (self.name_input.value.strip() + ".cif")
         with open(filename, 'w') as ofile:
             print()
 
