@@ -24,12 +24,18 @@ class CifParse():
             max_length=100000,
             height=800,
             )
-
+        self.find = pn.widgets.TextInput(name='Find', placeholder='RegEx to find...')
+        self.replace = pn.widgets.TextInput(name='Replace', placeholder='Text to replace...')
+        self.replace_bak = []
         self.textbox = pn.widgets.input.TextAreaInput(
             name='Output CIF', 
             placeholder='Output CIF will be shown here...', 
             height=800
             )
+        self.btn_replace = pn.widgets.Button(name='Replace RegEx', button_type='primary')
+        self.btn_replace.on_click(self.on_click_replace)
+        self.btn_undo = pn.widgets.Button(name='Undo replace', button_type='primary')
+        self.btn_undo.on_click(self.on_click_undo)
 
         self.btn_parse = pn.widgets.Button(name='Parse CIF', button_type='primary')
         self.btn_parse.on_click(self.on_click_parse)
@@ -51,6 +57,14 @@ class CifParse():
             self.cell_input,
             self.symm_input,
             self.coord_input,
+            pn.Row(
+                self.find,
+                self.replace,
+                pn.Column(
+                    self.btn_replace,
+                    self.btn_undo
+                )
+            ),
             self.btn_parse,
             pn.pane.Bokeh(self.applet),
             self.textbox,
@@ -111,6 +125,17 @@ end "cifstring"
         if first_char_inp not in first_char_list:
             raise ValueError(f"No space group starts with '{first_char_inp}': check the table at the bottom!")
         return first_char_inp + other_char_inp
+
+    def on_click_replace(self, event):
+        text_initial = self.coord_input.value
+        self.replace_bak.append(text_initial)
+        text_replaced = re.sub(self.find.value,self.replace.value,text_initial)
+        self.coord_input.value = text_replaced
+
+    def on_click_undo(self, event):
+        if len(self.replace_bak)==0:
+            raise ValueError("No replaced text backup to load!")
+        self.coord_input.value = self.replace_bak.pop()
 
     def on_click_parse(self, event):
         self.cif_dict = {} # Reset to avoid problems
