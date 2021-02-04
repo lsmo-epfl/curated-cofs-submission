@@ -129,7 +129,7 @@ end "cifstring"
     def on_click_replace(self, event):
         text_initial = self.coord_input.value
         self.replace_bak.append(text_initial)
-        text_replaced = re.sub(self.find.value,self.replace.value,text_initial)
+        text_replaced = re.sub(self.find.value,self.replace.value,text_initial,flags=re.MULTILINE)
         self.coord_input.value = text_replaced
 
     def on_click_undo(self, event):
@@ -162,9 +162,9 @@ end "cifstring"
                 self.cif_dict['coord'].append(newline1)
                 self.cif_dict['coord'].append(newline2)
             else:
-                raise ValueError(f"Impossible to parse line: '{line}'")
+                raise ValueError(f"Unable to parse line: '{line}'")
 
-        filename = Path("./cifs/") / (self.name_input.value.strip() + ".cif")
+        filename = Path(__file__).parent.parent / "cifs" / (self.name_input.value.strip() + ".cif")
         with open(filename, 'w') as ofile:
             print()
 
