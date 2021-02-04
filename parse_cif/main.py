@@ -121,20 +121,23 @@ end "cifstring"
         self.cif_dict['coord'] = []
 
         for line in self.coord_input.value.splitlines():
-            cols = len(line.split())
-            # skip len==0, and len==1 (pagenumbers)
-            if cols==4:
+            ncols = len(line.split())
+            if ncols==0 or ncols==1: # likely: \n or page number
+                continue
+            elif ncols==4: # likely: "atom_type x y z"
                 self.cif_dict['coord'].append(line)
-            if cols==5:
+            elif ncols==5: # likely: "atom_type element x y z"
                 d = line.split()
                 newline = f'{d[0]} {d[2]} {d[3]} {d[4]}'
                 self.cif_dict['coord'].append(newline)
-            if cols==8:
+            elif ncols==8: # likely: double column "atom1 x1 y1 z1 atom2 x2 y2 z2"
                 d = line.split()
                 newline1 = f'{d[0]} {d[1]} {d[2]} {d[3]}'
                 newline2 = f'{d[4]} {d[5]} {d[6]} {d[7]}'
                 self.cif_dict['coord'].append(newline1)
                 self.cif_dict['coord'].append(newline2)
+            else:
+                raise ValueError(f"Impossible to parse line: '{line}'")
 
         filename = Path("./cifs/") / (self.name_input.value.strip() + ".cif")
         with open(filename, 'w') as ofile:
