@@ -161,8 +161,8 @@ class CifForm():
         self.btn_cif = pn.widgets.Button(name='Parse CIF', button_type='primary')
         self.btn_cif.on_click(self.on_click_parse)
         self.ckbox_2x = pn.widgets.Checkbox(name='Force to replicate 2x in C direction')
-        self.ckbox_rot_zxy = pn.widgets.Checkbox(name='Rotate axes xyz to zxy')
-        self.ckbox_rot_yzx = pn.widgets.Checkbox(name='Rotate axes xyz to yxz')
+        self.ckbox_relabel_cab = pn.widgets.Checkbox(name='Relabel cell vectors abc to cab')
+        self.ckbox_relabel_bca = pn.widgets.Checkbox(name='Relabel cell vectors abc to bca')
 
         from structure import structure_jsmol
         import bokeh.models as bmd
@@ -214,8 +214,8 @@ class CifForm():
                 self.inp_cif, 
                 pn.Column(
                     self.btn_cif,
-                    self.ckbox_rot_zxy,
-                    self.ckbox_rot_yzx,
+                    self.ckbox_relabel_cab,
+                    self.ckbox_relabel_bca,
                     self.ckbox_2x
                 )
             ),
@@ -257,14 +257,14 @@ class CifForm():
         self.inp_modifications.value = 'none'
 
         # If the user selects the proper checkbox, rotate the cell
-        if self.ckbox_rot_zxy.value:
-            print("USER CHOICE: rotate axis to ZXY")
-            cell = atoms.cell
-            atoms.set_cell([ cell[2], cell[0], cell[1] ])
-        if self.ckbox_rot_yzx.value:
-            print("USER CHOICE: rotate axis to YZX")
-            cell = atoms.cell
-            atoms.set_cell([ cell[1], cell[2], cell[0] ])
+        if self.ckbox_relabel_cab.value:
+            print("USER CHOICE: relabel cell vectors to CAB")
+            a, b, c = atoms.cell
+            atoms.set_cell([ c, a, b ])
+        if self.ckbox_relabel_bca.value:
+            print("USER CHOICE: relabel cell vectors to BCA")
+            a, b, c = atoms.cell
+            atoms.set_cell([ b, c, a ])
 
         # If the 2x replication was chosen go with that, otherwise check first if there is the need
         # NOTE: this is usefull because sometime the layers are close by and ASE recognizes it as a 3D frameworks,
