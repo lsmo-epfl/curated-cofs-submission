@@ -8,20 +8,31 @@ import datetime
 import pandas as pd
 from data import PAPERS_FILE, FRAMEWORKS_FILE, CIFS_FOLDER
 
+def get_papers_df():
+    try:
+        papers_df = pd.read_csv(PAPERS_FILE) # needs to be loaded each time, to have the last entries!
+    except FileNotFoundError:
+        raise FileNotFoundError("ERROR: cof-papers.csv not found... check the README!")
+    return papers_df
+
+def get_frameworks_df():
+    try:
+        frameworks_df = pd.read_csv(FRAMEWORKS_FILE) # needs to be loaded each time, to have the last entries!
+    except FileNotFoundError:
+        raise FileNotFoundError("ERROR: cof-frameworks.csv not found... check the README!")
+    return frameworks_df
 
 def mint_paper_id(doi, year):
     """Check if the paper is already in cof-papers.csv (same DOI) and print that value,
     otherwise assign the new paper ID.
     """
-    try:
-        PAPERS_DF = pd.read_csv(PAPERS_FILE) # needs to be loaded each time, to have the last entries!
-    except FileNotFoundError:
-        raise FileNotFoundError("ERROR: cof-papers.csv not found... check the README!")
 
-    if doi in PAPERS_DF['DOI'].values:
-        return str(PAPERS_DF[PAPERS_DF['DOI'] == doi]['CURATED-COFs paper ID'].values[0]) + " (already present)"
+    papers_df = get_papers_df()
 
-    id_year = sorted(PAPERS_DF[PAPERS_DF['CURATED-COFs paper ID'].str.contains("p"+year[2:])]['CURATED-COFs paper ID'])
+    if doi in papers_df['DOI'].values:
+        return str(papers_df[papers_df['DOI'] == doi]['CURATED-COFs paper ID'].values[0]) + " (already present)"
+
+    id_year = sorted(papers_df[papers_df['CURATED-COFs paper ID'].str.contains("p"+year[2:])]['CURATED-COFs paper ID'])
     if len(id_year)==0:
         counter = 0
     else:
@@ -34,12 +45,8 @@ def mint_paper_id(doi, year):
 def mint_cof_id(paper_id, charge, dimensionality):
     """Check the list of CURATED-COF IDs and assign a new one accordingly."""
 
-    try:
-        FRAMEWORKS_DF = pd.read_csv(FRAMEWORKS_FILE) # needs to be loaded each time, to have the last entries!
-    except FileNotFoundError:
-        raise FileNotFoundError("ERROR: cof-frameworks.csv not found... check the README!")
-
-    other_cofs = [ id for id in FRAMEWORKS_DF["CURATED-COFs ID"] if id.startswith(paper_id[1:])]
+    frameworks_df = get_frameworks_df()
+    other_cofs = [ id for id in frameworks_df["CURATED-COFs ID"] if id.startswith(paper_id[1:])]
     counter = len(other_cofs)
     return "{paper}{counter}{charge}{dim}".format(paper=paper_id[1:], counter=str(counter), charge=charge,
                                                   dim=dimensionality)
@@ -171,8 +178,9 @@ class CifForm():
         self.inp_name = pn.widgets.TextInput(name='CIF name', placeholder='As used in publication')
         self.inp_dimensionality = pn.widgets.TextInput(name='CIF dimensionality', placeholder='Detected by ASE')
         self.inp_elements = pn.widgets.TextInput(name='CIF elements', placeholder='C,H,...')
-        #self.inp_modifications = pn.widgets.AutocompleteInput(name='CIF modifications', value='none', options=list(set(FRAMEWORKS_DF['Modifications']))) # not storing manual value in panel 0.10.3
-        self.inp_modifications = pn.widgets.TextInput(name='CIF modifications', value='none')
+        self.inp_modifications = pn.widgets.AutocompleteInput(
+            name='CIF modifications', value='none', 
+            options=list(set(get_frameworks_df()['Modifications'])), restrict=False)
         self.inp_charge = pn.widgets.Select(name='CIF charge', options={ 'Neutral': 'N', 'Charged': 'C' })
         self.inp_cof_id = pn.widgets.TextInput(name='COF ID', value='none')
         self.btn_mint_id = pn.widgets.Button(name='Mint', button_type='primary')
