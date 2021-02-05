@@ -77,9 +77,10 @@ def on_click_fetch(event):
     inp_doi.value = inp_doi.value or "10.1021/jacs.9b01891"
 
     works = Works()
-    print("Querying Crossref API for doi {}".format(inp_doi.value))
+    print("Querying Crossref API for doi {} (this can take several seconds, depending on the server...)".format(inp_doi.value))
     metadata = works.doi(inp_doi.value)
-    #print(json.dumps(metadata,sort_keys=True, indent=4))
+    print("Query done!")
+    #print(json.dumps(metadata,sort_keys=True, indent=4)) # Use for debug!
 
     if not metadata:
         btn_doi.button_type = 'danger'
@@ -248,7 +249,7 @@ class CifForm():
 
         # read the CIF file and get useful information
         cif_str = self.inp_cif.value.decode()
-        print(self.inp_cif.get_param_values())
+        # print(self.inp_cif.param.get_param_values()) # Use for debug!
         atoms = read(StringIO(cif_str), format='cif')
 
         formula = atoms.get_chemical_formula()
@@ -299,6 +300,7 @@ class CifForm():
             handle.seek(0)
             self.cif_str = handle.read()
 
+        print(f"Display: {self.inp_cif.filename}")
         self.display(self.cif_str.decode())
 
 
