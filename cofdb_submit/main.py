@@ -5,17 +5,34 @@ import os
 import numpy as np
 import panel as pn
 import datetime
-from data import PAPERS_DF, PAPERS_FILE, FRAMEWORKS_DF, FRAMEWORKS_FILE, CIFS_FOLDER
+import pandas as pd
+from data import PAPERS_FILE, FRAMEWORKS_FILE, CIFS_FOLDER
 
+def get_papers_df():
+    try:
+        papers_df = pd.read_csv(PAPERS_FILE) # needs to be loaded each time, to have the last entries!
+    except FileNotFoundError:
+        raise FileNotFoundError("ERROR: cof-papers.csv not found... check the README!")
+    return papers_df
+
+def get_frameworks_df():
+    try:
+        frameworks_df = pd.read_csv(FRAMEWORKS_FILE) # needs to be loaded each time, to have the last entries!
+    except FileNotFoundError:
+        raise FileNotFoundError("ERROR: cof-frameworks.csv not found... check the README!")
+    return frameworks_df
 
 def mint_paper_id(doi, year):
     """Check if the paper is already in cof-papers.csv (same DOI) and print that value,
     otherwise assign the new paper ID.
     """
-    if doi in PAPERS_DF['DOI'].values:
-        return str(PAPERS_DF[PAPERS_DF['DOI'] == doi]['CURATED-COFs paper ID'].values[0]) + " (already present)"
 
-    id_year = sorted(PAPERS_DF[PAPERS_DF['CURATED-COFs paper ID'].str.contains("p"+year[2:])]['CURATED-COFs paper ID'])
+    papers_df = get_papers_df()
+
+    if doi in papers_df['DOI'].values:
+        return str(papers_df[papers_df['DOI'] == doi]['CURATED-COFs paper ID'].values[0]) + " (already present)"
+
+    id_year = sorted(papers_df[papers_df['CURATED-COFs paper ID'].str.contains("p"+year[2:])]['CURATED-COFs paper ID'])
     if len(id_year)==0:
         counter = 0
     else:
@@ -27,7 +44,9 @@ def mint_paper_id(doi, year):
 
 def mint_cof_id(paper_id, charge, dimensionality):
     """Check the list of CURATED-COF IDs and assign a new one accordingly."""
-    other_cofs = [ id for id in FRAMEWORKS_DF["CURATED-COFs ID"] if id.startswith(paper_id[1:])]
+
+    frameworks_df = get_frameworks_df()
+    other_cofs = [ id for id in frameworks_df["CURATED-COFs ID"] if id.startswith(paper_id[1:])]
     counter = len(other_cofs)
     return "{paper}{counter}{charge}{dim}".format(paper=paper_id[1:], counter=str(counter), charge=charge,
                                                   dim=dimensionality)
@@ -58,9 +77,10 @@ def on_click_fetch(event):
     inp_doi.value = inp_doi.value or "10.1021/jacs.9b01891"
 
     works = Works()
-    print("Querying Crossref API for doi {}".format(inp_doi.value))
+    print("Querying Crossref API for doi {} (this can take several seconds, depending on the server...)".format(inp_doi.value))
     metadata = works.doi(inp_doi.value)
-    #print(json.dumps(metadata,sort_keys=True, indent=4))
+    print("Query done!")
+    #print(json.dumps(metadata,sort_keys=True, indent=4)) # Use for debug!
 
     if not metadata:
         btn_doi.button_type = 'danger'
@@ -141,6 +161,9 @@ class CifForm():
         self.inp_cif = pn.widgets.FileInput(name='CIF', accept='.cif')
         self.btn_cif = pn.widgets.Button(name='Parse CIF', button_type='primary')
         self.btn_cif.on_click(self.on_click_parse)
+        self.ckbox_2x = pn.widgets.Checkbox(name='Force to replicate 2x in C direction')
+        self.ckbox_relabel_cab = pn.widgets.Checkbox(name='Relabel cell vectors abc to cab')
+        self.ckbox_relabel_bca = pn.widgets.Checkbox(name='Relabel cell vectors abc to bca')
 
         from structure import structure_jsmol
         import bokeh.models as bmd
@@ -156,7 +179,9 @@ class CifForm():
         self.inp_name = pn.widgets.TextInput(name='CIF name', placeholder='As used in publication')
         self.inp_dimensionality = pn.widgets.TextInput(name='CIF dimensionality', placeholder='Detected by ASE')
         self.inp_elements = pn.widgets.TextInput(name='CIF elements', placeholder='C,H,...')
-        self.inp_modifications = pn.widgets.AutocompleteInput(name='CIF modifications', value='none', options=list(set(FRAMEWORKS_DF['Modifications'])))
+        self.inp_modifications = pn.widgets.AutocompleteInput(
+            name='CIF modifications', value='none', 
+            options=list(set(get_frameworks_df()['Modifications'])), restrict=False)
         self.inp_charge = pn.widgets.Select(name='CIF charge', options={ 'Neutral': 'N', 'Charged': 'C' })
         self.inp_cof_id = pn.widgets.TextInput(name='COF ID', value='none')
         self.btn_mint_id = pn.widgets.Button(name='Mint', button_type='primary')
@@ -186,7 +211,15 @@ class CifForm():
         """Layout of the CIF section of the page."""
         self.column = pn.Column(
             pn.pane.HTML("""<h2>Add CIF</h2>"""),
-            pn.Row(self.inp_cif, self.btn_cif),
+            pn.Row(
+                self.inp_cif, 
+                pn.Column(
+                    self.btn_cif,
+                    self.ckbox_relabel_cab,
+                    self.ckbox_relabel_bca,
+                    self.ckbox_2x
+                )
+            ),
             pn.pane.Bokeh(self.applet),
             pn.Row(self.inp_source, self.inp_csd),
             self.inp_name,
@@ -216,7 +249,7 @@ class CifForm():
 
         # read the CIF file and get useful information
         cif_str = self.inp_cif.value.decode()
-        print(self.inp_cif.get_param_values())
+        # print(self.inp_cif.param.get_param_values()) # Use for debug!
         atoms = read(StringIO(cif_str), format='cif')
 
         formula = atoms.get_chemical_formula()
@@ -224,21 +257,41 @@ class CifForm():
         self.inp_elements.value = ",".join(elements)
         self.inp_modifications.value = 'none'
 
-        intervals = analyze_dimensionality(atoms, method='RDA')
-        if intervals[0].dimtype == '2D':
-            self.inp_dimensionality.value = '2D'
+        # If the user selects the proper checkbox, rotate the cell
+        if self.ckbox_relabel_cab.value:
+            print("USER CHOICE: relabel cell vectors to CAB")
+            a, b, c = atoms.cell
+            atoms.set_cell([ c, a, b ])
+        if self.ckbox_relabel_bca.value:
+            print("USER CHOICE: relabel cell vectors to BCA")
+            a, b, c = atoms.cell
+            atoms.set_cell([ b, c, a ])
 
-            # Check if it is correcly oriented, and extend to two layers if onyly one is present
-            z_min_thr = 6 #if less, it is likely a single layer
-            cell_lengths = atoms.get_cell_lengths_and_angles()[0:3]
-            if cell_lengths[0] < z_min_thr or cell_lengths[1] < z_min_thr: # X or Y are perpendicular to a single layer
-                self.inp_dimensionality.value = "ERROR: you need to rotate the axes to have the layers on XY plane."
-                self.inp_modifications.value = "ERROR: you need to rotate the axes to have the layers on XY plane."
-            if cell_lengths[2] < z_min_thr: # Z is perpendicular to a single layer
-                atoms = make_supercell(atoms, np.diag([1,1,2]))
-                self.inp_modifications.value = 'replicated 2x in C direction'
+        # If the 2x replication was chosen go with that, otherwise check first if there is the need
+        # NOTE: this is usefull because sometime the layers are close by and ASE recognizes it as a 3D frameworks,
+        #       but you want to force the choice of assuming it is a 2D COF and need 2 layers
+
+        if self.ckbox_2x.value:
+            print("USER CHOICE: force the frameworks to be 2D and duplicate 2x in C direction")
+            self.inp_dimensionality.value = '2D'
+            atoms = make_supercell(atoms, np.diag([1,1,2]))
+            self.inp_modifications.value = 'replicated 2x in C direction'
         else:
-            self.inp_dimensionality.value = '3D'
+            intervals = analyze_dimensionality(atoms, method='RDA')
+            if intervals[0].dimtype == '2D':
+                self.inp_dimensionality.value = '2D'
+
+                # Check if it is correcly oriented, and extend to two layers if onyly one is present
+                z_min_thr = 6 #if less, it is likely a single layer
+                cell_lengths = atoms.get_cell_lengths_and_angles()[0:3]
+                if cell_lengths[0] < z_min_thr or cell_lengths[1] < z_min_thr: # X or Y are perpendicular the layer
+                    self.inp_dimensionality.value = "ERROR: you need to rotate the axes to have the layers on XY plane."
+                    self.inp_modifications.value = "ERROR: you need to rotate the axes to have the layers on XY plane."
+                if cell_lengths[2] < z_min_thr: # Z is perpendicular to a single layer
+                    atoms = make_supercell(atoms, np.diag([1,1,2]))
+                    self.inp_modifications.value = 'replicated 2x in C direction'
+            else:
+                self.inp_dimensionality.value = '3D'
 
         self.atoms = atoms
         import tempfile
@@ -247,6 +300,7 @@ class CifForm():
             handle.seek(0)
             self.cif_str = handle.read()
 
+        print(f"Display: {self.inp_cif.filename}")
         self.display(self.cif_str.decode())
 
 
