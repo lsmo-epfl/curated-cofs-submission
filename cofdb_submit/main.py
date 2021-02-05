@@ -161,8 +161,8 @@ class CifForm():
         self.btn_cif = pn.widgets.Button(name='Parse CIF', button_type='primary')
         self.btn_cif.on_click(self.on_click_parse)
         self.ckbox_2x = pn.widgets.Checkbox(name='Force to replicate 2x in C direction')
-        self.ckbox_rot_zxy = pn.widgets.Checkbox(name='Rotate axes xyz to zxy (TO IMPLEMENT)') # TODO: make this work!
-        self.ckbox_rot_yzx = pn.widgets.Checkbox(name='Rotate axes xyz to yxz (TO IMPLEMENT)') # TODO: make this work!
+        self.ckbox_rot_zxy = pn.widgets.Checkbox(name='Rotate axes xyz to zxy')
+        self.ckbox_rot_yzx = pn.widgets.Checkbox(name='Rotate axes xyz to yxz')
 
         from structure import structure_jsmol
         import bokeh.models as bmd
@@ -214,9 +214,9 @@ class CifForm():
                 self.inp_cif, 
                 pn.Column(
                     self.btn_cif,
-                    self.ckbox_2x,
                     self.ckbox_rot_zxy,
-                    self.ckbox_rot_yzx
+                    self.ckbox_rot_yzx,
+                    self.ckbox_2x
                 )
             ),
             pn.pane.Bokeh(self.applet),
@@ -256,11 +256,22 @@ class CifForm():
         self.inp_elements.value = ",".join(elements)
         self.inp_modifications.value = 'none'
 
+        # If the user selects the proper checkbox, rotate the cell
+        if self.ckbox_rot_zxy.value:
+            print("USER CHOICE: rotate axis to ZXY")
+            atoms.rotate('x','y', rotate_cell=True)
+            atoms.rotate(90,'y', rotate_cell=True)
+        if self.ckbox_rot_yzx.value:
+            print("USER CHOICE: rotate axis to YZX")
+            atoms.rotate('y','x', rotate_cell=True)
+            atoms.rotate(90,'x', rotate_cell=True)
+
         # If the 2x replication was chosen go with that, otherwise check first if there is the need
         # NOTE: this is usefull because sometime the layers are close by and ASE recognizes it as a 3D frameworks,
         #       but you want to force the choice of assuming it is a 2D COF and need 2 layers
 
         if self.ckbox_2x.value:
+            print("USER CHOICE: force the frameworks to be 2D and duplicate 2x in C direction")
             self.inp_dimensionality.value = '2D'
             atoms = make_supercell(atoms, np.diag([1,1,2]))
             self.inp_modifications.value = 'replicated 2x in C direction'
