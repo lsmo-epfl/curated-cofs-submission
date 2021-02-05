@@ -73,8 +73,8 @@ def on_click_fetch(event):
     # turn the "Add paper" primary, to remember clicking it again!
     btn_add_paper.button_type = 'primary'
 
-    # test data
-    inp_doi.value = inp_doi.value or "10.1021/jacs.9b01891"
+    # Input DOI: (1) if empty use test DOI (2) If Angewandte German Edition, change with International Edition
+    inp_doi.value = inp_doi.value.replace("ange","anie") or "10.1021/jacs.9b01891"
 
     works = Works()
     print("Querying Crossref API for doi {} (this can take several seconds, depending on the server...)".format(inp_doi.value))
