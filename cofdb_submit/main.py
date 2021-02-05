@@ -259,12 +259,12 @@ class CifForm():
         # If the user selects the proper checkbox, rotate the cell
         if self.ckbox_rot_zxy.value:
             print("USER CHOICE: rotate axis to ZXY")
-            atoms.rotate('x','y', rotate_cell=True)
-            atoms.rotate(90,'y', rotate_cell=True)
+            cell = atoms.cell
+            atoms.set_cell([ cell[2], cell[0], cell[1] ])
         if self.ckbox_rot_yzx.value:
             print("USER CHOICE: rotate axis to YZX")
-            atoms.rotate('y','x', rotate_cell=True)
-            atoms.rotate(90,'x', rotate_cell=True)
+            cell = atoms.cell
+            atoms.set_cell([ cell[1], cell[2], cell[0] ])
 
         # If the 2x replication was chosen go with that, otherwise check first if there is the need
         # NOTE: this is usefull because sometime the layers are close by and ASE recognizes it as a 3D frameworks,
