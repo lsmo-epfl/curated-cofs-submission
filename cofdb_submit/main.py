@@ -153,6 +153,9 @@ class CifForm():
         self.inp_cif = pn.widgets.FileInput(name='CIF', accept='.cif')
         self.btn_cif = pn.widgets.Button(name='Parse CIF', button_type='primary')
         self.btn_cif.on_click(self.on_click_parse)
+        self.ckbox_2x = pn.widgets.Checkbox(name='Force to replicate 2x in C direction')
+        self.ckbox_rot_zxy = pn.widgets.Checkbox(name='Rotate axes xyz to zxy (TO IMPLEMENT)') # TODO: make this work!
+        self.ckbox_rot_yzx = pn.widgets.Checkbox(name='Rotate axes xyz to yxz (TO IMPLEMENT)') # TODO: make this work!
 
         from structure import structure_jsmol
         import bokeh.models as bmd
@@ -199,7 +202,15 @@ class CifForm():
         """Layout of the CIF section of the page."""
         self.column = pn.Column(
             pn.pane.HTML("""<h2>Add CIF</h2>"""),
-            pn.Row(self.inp_cif, self.btn_cif),
+            pn.Row(
+                self.inp_cif, 
+                pn.Column(
+                    self.btn_cif,
+                    self.ckbox_2x,
+                    self.ckbox_rot_zxy,
+                    self.ckbox_rot_yzx
+                )
+            ),
             pn.pane.Bokeh(self.applet),
             pn.Row(self.inp_source, self.inp_csd),
             self.inp_name,
@@ -237,21 +248,30 @@ class CifForm():
         self.inp_elements.value = ",".join(elements)
         self.inp_modifications.value = 'none'
 
-        intervals = analyze_dimensionality(atoms, method='RDA')
-        if intervals[0].dimtype == '2D':
-            self.inp_dimensionality.value = '2D'
+        # If the 2x replication was chosen go with that, otherwise check first if there is the need
+        # NOTE: this is usefull because sometime the layers are close by and ASE recognizes it as a 3D frameworks,
+        #       but you want to force the choice of assuming it is a 2D COF and need 2 layers
 
-            # Check if it is correcly oriented, and extend to two layers if onyly one is present
-            z_min_thr = 6 #if less, it is likely a single layer
-            cell_lengths = atoms.get_cell_lengths_and_angles()[0:3]
-            if cell_lengths[0] < z_min_thr or cell_lengths[1] < z_min_thr: # X or Y are perpendicular to a single layer
-                self.inp_dimensionality.value = "ERROR: you need to rotate the axes to have the layers on XY plane."
-                self.inp_modifications.value = "ERROR: you need to rotate the axes to have the layers on XY plane."
-            if cell_lengths[2] < z_min_thr: # Z is perpendicular to a single layer
-                atoms = make_supercell(atoms, np.diag([1,1,2]))
-                self.inp_modifications.value = 'replicated 2x in C direction'
+        if self.ckbox_2x.value:
+            self.inp_dimensionality.value = '2D'
+            atoms = make_supercell(atoms, np.diag([1,1,2]))
+            self.inp_modifications.value = 'replicated 2x in C direction'
         else:
-            self.inp_dimensionality.value = '3D'
+            intervals = analyze_dimensionality(atoms, method='RDA')
+            if intervals[0].dimtype == '2D':
+                self.inp_dimensionality.value = '2D'
+
+                # Check if it is correcly oriented, and extend to two layers if onyly one is present
+                z_min_thr = 6 #if less, it is likely a single layer
+                cell_lengths = atoms.get_cell_lengths_and_angles()[0:3]
+                if cell_lengths[0] < z_min_thr or cell_lengths[1] < z_min_thr: # X or Y are perpendicular the layer
+                    self.inp_dimensionality.value = "ERROR: you need to rotate the axes to have the layers on XY plane."
+                    self.inp_modifications.value = "ERROR: you need to rotate the axes to have the layers on XY plane."
+                if cell_lengths[2] < z_min_thr: # Z is perpendicular to a single layer
+                    atoms = make_supercell(atoms, np.diag([1,1,2]))
+                    self.inp_modifications.value = 'replicated 2x in C direction'
+            else:
+                self.inp_dimensionality.value = '3D'
 
         self.atoms = atoms
         import tempfile
