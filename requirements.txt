@@ -1,4 +1,5 @@
-bokeh>=2.3.0
+# to replace with bokeh>=2.3.0 when it's out
+bokeh==2.3.0.dev5
 jsmol-bokeh-extension>=0.2.1 # by ltalirz
 panel>=0.10.0
 param>=1.9.2
