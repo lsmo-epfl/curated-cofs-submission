@@ -150,15 +150,17 @@ end "cifstring"
             if ncols==0 or ncols==1: # likely: \n or page number
                 continue
             elif ncols==4: # likely: "atom_type x y z"
-                self.cif_dict['coord'].append(line)
+                d = line.split()
+                newline = f'{d[0]} {d[1]} {d[2]} {d[3].split("S")[0]}' # remove the Sxx page index if present
+                self.cif_dict['coord'].append(newline)
             elif ncols==5: # likely: "atom_type element x y z"
                 d = line.split()
-                newline = f'{d[0]} {d[2]} {d[3]} {d[4]}'
+                newline = f'{d[0]} {d[2]} {d[3]} {d[4].split("S")[0]}'
                 self.cif_dict['coord'].append(newline)
             elif ncols==8: # likely: double column "atom1 x1 y1 z1 atom2 x2 y2 z2"
                 d = line.split()
                 newline1 = f'{d[0]} {d[1]} {d[2]} {d[3]}'
-                newline2 = f'{d[4]} {d[5]} {d[6]} {d[7]}'
+                newline2 = f'{d[4]} {d[5]} {d[6]} {d[7].split("S")[0]}'
                 self.cif_dict['coord'].append(newline1)
                 self.cif_dict['coord'].append(newline2)
             else:
